@@ -11,10 +11,13 @@ import {
   TableRow,
   IconButton,
 } from '@mui/material';
+import Container from '@mui/material/Container';
 import SearchBar from './Search';
 import NavigateNextIcon from '@mui/icons-material/NavigateNext';
 import NavigateBeforeIcon from '@mui/icons-material/NavigateBefore';
-import { fetchUsers } from '../apiData';
+import {ArrowForward } from "@mui/icons-material"
+import { Link } from 'react-router-dom';
+import axios from 'axios';
 
 interface Props {
     users: User[];
@@ -22,11 +25,12 @@ interface Props {
 }
 const UserList: FunctionComponent<Props> = ({users,setUsers}) => {
 
-  const columnHeaders= ["Name","Email","Cell Phone","Gender","Age","Country"];
+  const columnHeaders= ["Name","Email","Cell Phone","Gender","Age","Country","Profile"];
 
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [filteredUsers, setFilteredUsers] = useState<User[]>([]);
   const [currentPage, setCurrentPage] = useState<number>(1);
+  const resultsPerPage: number = 10;
 
   useEffect(() => {
     const filteredData = users.filter(user => {
@@ -37,37 +41,27 @@ const UserList: FunctionComponent<Props> = ({users,setUsers}) => {
       return nameMatch || genderMatch || countryMatch || ageMatch;
     });
     setFilteredUsers(filteredData);
-    setCurrentPage(1);
+   
   }, [searchQuery, users]);
 
-const totalUsers = 100; // Total number of users you want to display
-const usersPerPage = 10; // Number of users per page
+  useEffect(() => {
+    const fetchUsers = async () => {
+      try {
+        const response = await axios.get(`https://randomuser.me/api/?results=${resultsPerPage}&page=${currentPage}`);
+        setUsers(response.data.results);
+      } catch (error) {
+        console.error('Error fetching users:', error);
+      }
+    };
 
-const totalPages = Math.ceil(totalUsers / usersPerPage);
+    fetchUsers();
+  }, [currentPage]);
 
-
-  const handlePageChange = (newPage : number) => {
-    setCurrentPage(newPage);
-    fetchUsers({page_number:newPage}).then((res)=>{
-      setUsers(res)
-    })
-  };
-
-  const handlePreviousClick = () => {
-    if (currentPage > 1) {
-      handlePageChange(currentPage - 1);
-    }
-  };
-
-  const handleNextClick = () => {
-    if (currentPage < totalPages) {
-      handlePageChange(currentPage + 1);
-    }
-  };
-  
     return (
+      <Container maxWidth="lg">
+
       <Paper variant="outlined" style={{ maxWidth: '100%' }}>
-       <div style={{ marginBottom: '20px', display: 'flex', alignItems: 'center' }}>
+       <div style={{ display: 'flex', alignItems: 'center' }}>
        <SearchBar setSearchQuery={setSearchQuery} />
       </div>
       <TableContainer>
@@ -85,38 +79,45 @@ const totalPages = Math.ceil(totalUsers / usersPerPage);
         </TableHead>
         <TableBody>
           {filteredUsers?.map((user) => (
-            <TableRow
-              key={user.login.uuid}
-              sx={{ '&:last-child td, &:last-child th': { border: 0 } }}
-            >
-              <TableCell component="th" scope="row">
-                {user.name.first} {user.name.last}
-              </TableCell>
-              <TableCell>{user.email}</TableCell>
-              <TableCell>{user.cell}</TableCell>
-              <TableCell>{user.gender}</TableCell>
-              <TableCell>{user.dob.age}</TableCell>
-              <TableCell>{user.location.country}</TableCell>
-            </TableRow>
+              <TableRow
+                sx={{ '&:last-child td, &:last-child th': { border: 0 } }}
+              >
+                <TableCell component="th" scope="row">
+                  {user.name.first} {user.name.last}
+                </TableCell>
+                <TableCell>{user.email}</TableCell>
+                <TableCell>{user.cell}</TableCell>
+                <TableCell>{user.gender}</TableCell>
+                <TableCell>{user.dob.age}</TableCell>
+                <TableCell>{user.location.country}</TableCell>
+                <TableCell>
+                <Link to={`/profile/${user.login.uuid}`} key={user.login.uuid}>
+                  <ArrowForward/>
+                </Link>
+                </TableCell>
+              </TableRow>
           ))}
         </TableBody>
       </Table>
     </TableContainer>
-    {totalPages > 1 && <TableCell colSpan={6} align="right" sx={{ paddingTop: '0' }}>
+
+    <TableCell colSpan={6} align="right" sx={{ paddingTop: '0' }}>
       <IconButton
-        disabled={currentPage === 1}
-        onClick={handlePreviousClick}
+        disabled = {currentPage === 1 ? true : false}
+        onClick={() => setCurrentPage(currentPage - 1)}
       >
         <NavigateBeforeIcon />
       </IconButton>
+      {currentPage}
       <IconButton
-        disabled={currentPage === totalPages}
-        onClick={handleNextClick}
+        onClick={() => setCurrentPage(currentPage + 1)}
       >
         <NavigateNextIcon />
       </IconButton>
-    </TableCell>}
+    </TableCell>
     </Paper>
+    </Container>
+
     );
   };
   
